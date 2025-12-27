@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libbpf-dev
+
+      - name: Generate vmlinux.h
+        run: |
+          sudo /usr/sbin/bpftool btf dump file /sys/kernel/btf/vmlinux format c > internal/ebpf/bpf/vmlinux.h
+
+      - name: Generate eBPF
+        run: make generate
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Vet
+        run: go vet ./...
