@@ -37,25 +37,14 @@ jobs:
         run: |
           mkdir -p dist
           
-          # Build for Linux amd64
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmond-linux-amd64 ./cmd/portmond
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmon-linux-amd64 ./cmd/portmon
-          
-          # Build for Linux arm64
-          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/portmond-linux-arm64 ./cmd/portmond
-          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/portmon-linux-arm64 ./cmd/portmon
+          # Build for Linux amd64 only
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmond ./cmd/portmond
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmon ./cmd/portmon
 
-      - name: Create archives
+      - name: Create archive
         run: |
           cd dist
-          
-          # Linux amd64
-          tar -czvf portmon-linux-amd64.tar.gz portmond-linux-amd64 portmon-linux-amd64
-          
-          # Linux arm64
-          tar -czvf portmon-linux-arm64.tar.gz portmond-linux-arm64 portmon-linux-arm64
-          
-          # Generate checksums
+          tar -czvf portmon-linux-amd64.tar.gz portmond portmon
           sha256sum *.tar.gz > checksums.txt
 
       - name: Create Release
@@ -63,7 +52,6 @@ jobs:
         with:
           files: |
             dist/portmon-linux-amd64.tar.gz
-            dist/portmon-linux-arm64.tar.gz
             dist/checksums.txt
           generate_release_notes: true
         env:
