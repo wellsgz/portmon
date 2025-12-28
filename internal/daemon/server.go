@@ -168,6 +168,18 @@ func (s *Server) handleGetRealtimeStats(req *api.Request) *api.Response {
 
 	stats := s.collector.GetStats(params.Port)
 
+	// Add today's persisted stats from SQLite
+	// This preserves accumulated traffic across daemon restarts
+	today := time.Now().Format("2006-01-02")
+	dbStats, err := s.db.QueryDailyStats(params.Port, today, today)
+	if err == nil && len(dbStats) > 0 {
+		stats.RxBytes += dbStats[0].RxBytes
+		stats.TxBytes += dbStats[0].TxBytes
+		stats.RxPackets += dbStats[0].RxPackets
+		stats.TxPackets += dbStats[0].TxPackets
+		stats.Connections += dbStats[0].Connections
+	}
+
 	result := api.RealtimeStatsResult{
 		Port:        stats.Port,
 		RxBytes:     stats.RxBytes,

@@ -85,15 +85,35 @@ sudo ./bin/portmond --port 5000 --port 8080
 
 ## Configuration
 
-Default data directory: `~/.portmon/`
+### Config File (Recommended)
+
+Create `/etc/portmon/portmon.yaml`:
+
+```yaml
+ports:
+  - 5000
+  - 8080
+
+data_dir: /var/lib/portmon
+socket: /run/portmon/portmon.sock
+retention_days: 90
+log_level: info
+```
+
+Then run: `sudo portmond` or `sudo portmond -c /path/to/config.yaml`
+
+### CLI Options
+
+CLI flags override config file values:
 
 ```bash
-# Daemon options
 portmond \
+  --config /etc/portmon/portmon.yaml \
   --port 5000 \               # Ports to monitor (repeatable)
   --data-dir ~/.portmon \     # Data directory
   --retention-days 180 \      # Data retention (1-365 days)
-  --socket ~/.portmon/portmon.sock
+  --socket ~/.portmon/portmon.sock \
+  --log-level info            # debug, info, warn, error
 
 # CLI options
 portmon stats --port 5000 --today       # Today's stats

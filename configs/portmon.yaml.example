@@ -1,0 +1,23 @@
+# Example portmon configuration
+# Place at /etc/portmon/portmon.yaml
+
+# Ports to monitor (required)
+ports:
+  - 5000
+  - 8080
+
+# Data directory for SQLite database
+# Default: ~/.portmon
+data_dir: /var/lib/portmon
+
+# Unix socket path for IPC
+# Default: <data_dir>/portmon.sock
+socket: /run/portmon/portmon.sock
+
+# Data retention in days (1-365)
+# Default: 180
+retention_days: 90
+
+# Log level: debug, info, warn, error
+# Default: info
+log_level: info
