@@ -40,20 +40,30 @@ func (d *Daemon) Run() error {
 	// Expand data dir
 	dataDir := d.config.DataDir
 	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".portmon")
-	} else if dataDir[0] == '~' {
+		dataDir = "/var/lib/portmon"
+	} else if len(dataDir) > 0 && dataDir[0] == '~' {
 		home, _ := os.UserHomeDir()
 		dataDir = filepath.Join(home, dataDir[1:])
 	}
 	d.config.DataDir = dataDir
 
+	// Create data directory if it doesn't exist
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return fmt.Errorf("creating data directory %s: %w", dataDir, err)
+	}
+
 	// Expand socket path
 	socketPath := d.config.SocketPath
 	if socketPath == "" {
-		socketPath = filepath.Join(dataDir, "portmon.sock")
+		socketPath = "/run/portmon/portmon.sock"
 	}
 	d.config.SocketPath = socketPath
+
+	// Create socket directory if it doesn't exist
+	socketDir := filepath.Dir(socketPath)
+	if err := os.MkdirAll(socketDir, 0755); err != nil {
+		return fmt.Errorf("creating socket directory %s: %w", socketDir, err)
+	}
 
 	slog.Info("starting portmon daemon",
 		"data_dir", dataDir,
@@ -104,7 +114,7 @@ func (d *Daemon) Run() error {
 	go d.runRetentionCleanup(ctx)
 
 	// Start IPC server
-	server := NewServer(socketPath, loader, collector, db, d.config)
+	server := NewServer(socketPath, loader, collector, aggregator, db, d.config)
 	d.server = server
 
 	go func() {

@@ -23,6 +23,7 @@ type Server struct {
 	listener   net.Listener
 	loader     *ebpf.Loader
 	collector  *ebpf.Collector
+	aggregator *Aggregator
 	db         *storage.DB
 	config     *Config
 	startTime  time.Time
@@ -41,11 +42,12 @@ type Config struct {
 }
 
 // NewServer creates a new IPC server.
-func NewServer(socketPath string, loader *ebpf.Loader, collector *ebpf.Collector, db *storage.DB, config *Config) *Server {
+func NewServer(socketPath string, loader *ebpf.Loader, collector *ebpf.Collector, aggregator *Aggregator, db *storage.DB, config *Config) *Server {
 	return &Server{
 		socketPath: socketPath,
 		loader:     loader,
 		collector:  collector,
+		aggregator: aggregator,
 		db:         db,
 		config:     config,
 		startTime:  time.Now(),
@@ -155,6 +157,8 @@ func (s *Server) handleRequest(req *api.Request) *api.Response {
 		return s.handleRemovePort(req)
 	case api.MethodListPorts:
 		return s.handleListPorts(req)
+	case api.MethodFlushStats:
+		return s.handleFlushStats(req)
 	default:
 		return s.errorResponse(req.ID, api.ErrCodeMethodNotFound, "method not found")
 	}
@@ -304,6 +308,16 @@ func (s *Server) handleRemovePort(req *api.Request) *api.Response {
 func (s *Server) handleListPorts(req *api.Request) *api.Response {
 	return s.successResponse(req.ID, api.ListPortsResult{
 		Ports: s.config.Ports,
+	})
+}
+
+func (s *Server) handleFlushStats(req *api.Request) *api.Response {
+	if s.aggregator != nil {
+		s.aggregator.Flush()
+	}
+	return s.successResponse(req.ID, api.SuccessResult{
+		Success: true,
+		Message: "stats flushed to database",
 	})
 }
 

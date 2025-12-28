@@ -208,6 +208,25 @@ func (m Model) fetchStats() tea.Cmd {
 	}
 }
 
+// flushAndFetch flushes stats to DB and then fetches fresh data.
+func (m Model) flushAndFetch() tea.Cmd {
+	return func() tea.Msg {
+		if m.client == nil {
+			c := client.New(m.socketPath)
+			if err := c.Connect(); err != nil {
+				return statsMsg{err: err}
+			}
+			m.client = c
+		}
+
+		// Flush stats to database first
+		m.client.FlushStats()
+
+		// Then fetch stats (this will include the just-flushed data)
+		return m.fetchStats()()
+	}
+}
+
 // Update handles messages
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -275,7 +294,7 @@ func (m Model) handleDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Refresh):
-		return m, m.fetchStats()
+		return m, m.flushAndFetch()
 
 	case key.Matches(msg, m.keys.NextPort):
 		if len(m.ports) > 0 {

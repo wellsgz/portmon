@@ -8,10 +8,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/spf13/cobra"
 	"github.com/wellsgz/portmon/internal/client"
 	"github.com/wellsgz/portmon/internal/storage"
 	"github.com/wellsgz/portmon/internal/tui"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -34,7 +34,7 @@ func main() {
 		Long:  `portmon is a client for querying traffic statistics from the portmond daemon.`,
 	}
 
-	rootCmd.PersistentFlags().StringVar(&socketPath, "socket", "", "Unix socket path (default: ~/.portmon/portmon.sock)")
+	rootCmd.PersistentFlags().StringVar(&socketPath, "socket", "", "Unix socket path (default: /run/portmon/portmon.sock)")
 
 	// TUI command
 	tuiCmd := &cobra.Command{

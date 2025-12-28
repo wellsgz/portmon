@@ -44,6 +44,7 @@ const (
 	MethodAddPort              = "add_port"
 	MethodRemovePort           = "remove_port"
 	MethodListPorts            = "list_ports"
+	MethodFlushStats           = "flush_stats"
 )
 
 // ========== Request Parameters ==========

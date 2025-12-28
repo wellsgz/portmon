@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -28,8 +26,7 @@ type Client struct {
 // New creates a new client.
 func New(socketPath string) *Client {
 	if socketPath == "" {
-		home, _ := os.UserHomeDir()
-		socketPath = filepath.Join(home, ".portmon", "portmon.sock")
+		socketPath = "/run/portmon/portmon.sock"
 	}
 	return &Client{
 		socketPath: socketPath,
@@ -202,4 +199,10 @@ func (c *Client) ListPorts() ([]uint16, error) {
 		return nil, err
 	}
 	return result.Ports, nil
+}
+
+// FlushStats triggers immediate persistence of stats to database.
+func (c *Client) FlushStats() error {
+	_, err := c.call(api.MethodFlushStats, nil)
+	return err
 }

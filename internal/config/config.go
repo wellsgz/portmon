@@ -45,9 +45,9 @@ func Load(path string) (*Config, error) {
 func Defaults() *Config {
 	return &Config{
 		Ports:         []int{},
-		DataDir:       "",
+		DataDir:       "/var/lib/portmon",
 		RetentionDays: 180,
-		Socket:        "",
+		Socket:        "/run/portmon/portmon.sock",
 		LogLevel:      "info",
 	}
 }

@@ -32,9 +32,9 @@ and exposes an IPC interface for clients.`,
 
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "Config file path (default: /etc/portmon/portmon.yaml)")
 	rootCmd.Flags().IntSliceVarP(&ports, "port", "p", nil, "Ports to monitor (can be specified multiple times)")
-	rootCmd.Flags().StringVar(&dataDir, "data-dir", "", "Data directory (default: ~/.portmon)")
+	rootCmd.Flags().StringVar(&dataDir, "data-dir", "", "Data directory (default: /var/lib/portmon)")
 	rootCmd.Flags().IntVar(&retentionDays, "retention-days", 0, "Data retention in days (1-365)")
-	rootCmd.Flags().StringVar(&socketPath, "socket", "", "Unix socket path (default: ~/.portmon/portmon.sock)")
+	rootCmd.Flags().StringVar(&socketPath, "socket", "", "Unix socket path (default: /run/portmon/portmon.sock)")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "", "Log level (debug, info, warn, error)")
 
 	if err := rootCmd.Execute(); err != nil {

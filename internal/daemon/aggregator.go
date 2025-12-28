@@ -67,6 +67,12 @@ func (a *Aggregator) Run(ctx context.Context) {
 	}
 }
 
+// Flush immediately persists current stats to database.
+func (a *Aggregator) Flush() {
+	a.persist()
+	slog.Debug("aggregator flushed on demand")
+}
+
 // persist writes accumulated stats to the database.
 func (a *Aggregator) persist() {
 	allStats := a.collector.GetAllStats()
