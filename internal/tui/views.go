@@ -42,7 +42,7 @@ func (m Model) viewDashboard() string {
 		}
 		b.WriteString(PanelStyle.Width(m.width - 2).Render(errMsg))
 	} else {
-		b.WriteString(PanelStyle.Width(m.width - 2).Render(LabelStyle.Render("No port selected. Use ←/→ to select a port.")))
+		b.WriteString(PanelStyle.Width(m.width - 2).Render(LabelStyle.Render("No port selected. Use ↑/↓ to select a port.")))
 	}
 
 	b.WriteString("\n")
@@ -153,72 +153,90 @@ func (m Model) renderRealtimeStats() string {
 	return b.String()
 }
 
-// renderChart renders the daily traffic bar chart
+// renderChart renders the daily traffic bar chart with fixed height
 func (m Model) renderChart() string {
 	var b strings.Builder
+	const maxDays = 5 // Fixed number of rows
 
 	b.WriteString(PanelTitleStyle.Render("Daily Traffic"))
 	b.WriteString("\n\n")
 
-	if m.historicalStats == nil || len(m.historicalStats.DailyStats) == 0 {
-		b.WriteString(LabelStyle.Render("No historical data"))
-		return b.String()
+	// Chart width (leave room for date label, bars, and RX/TX values)
+	chartWidth := m.width - 60
+	if chartWidth < 20 {
+		chartWidth = 20
+	}
+
+	// Get stats or create empty slice
+	var stats []struct {
+		Date    string
+		RxBytes uint64
+		TxBytes uint64
+	}
+
+	if m.historicalStats != nil && len(m.historicalStats.DailyStats) > 0 {
+		for _, d := range m.historicalStats.DailyStats {
+			stats = append(stats, struct {
+				Date    string
+				RxBytes uint64
+				TxBytes uint64
+			}{d.Date, d.RxBytes, d.TxBytes})
+		}
+		// Limit to last maxDays
+		if len(stats) > maxDays {
+			stats = stats[len(stats)-maxDays:]
+		}
 	}
 
 	// Find max value for scaling
 	var maxBytes uint64
-	for _, d := range m.historicalStats.DailyStats {
+	for _, d := range stats {
 		total := d.RxBytes + d.TxBytes
 		if total > maxBytes {
 			maxBytes = total
 		}
 	}
-
 	if maxBytes == 0 {
-		b.WriteString(LabelStyle.Render("No traffic recorded"))
-		return b.String()
+		maxBytes = 1 // Avoid division by zero
 	}
 
-	// Chart width (leave room for date label and value)
-	chartWidth := m.width - 30
-	if chartWidth < 20 {
-		chartWidth = 20
-	}
+	// Render rows (always show maxDays rows for consistent height)
+	for i := 0; i < maxDays; i++ {
+		if i < len(stats) {
+			d := stats[i]
+			// Date label
+			dateLabel := ChartLabel.Render(fmt.Sprintf("%-6s", d.Date[5:])) // Just MM-DD
 
-	// Limit to last 10 days if too many
-	stats := m.historicalStats.DailyStats
-	if len(stats) > 10 {
-		stats = stats[len(stats)-10:]
-	}
+			// Calculate bar lengths
+			rxRatio := float64(d.RxBytes) / float64(maxBytes)
+			txRatio := float64(d.TxBytes) / float64(maxBytes)
 
-	// Render bars
-	for _, d := range stats {
-		// Date label
-		dateLabel := ChartLabel.Render(fmt.Sprintf("%-10s", d.Date[5:])) // Just MM-DD
+			rxLen := int(rxRatio * float64(chartWidth))
+			txLen := int(txRatio * float64(chartWidth))
 
-		// Calculate bar lengths
-		rxRatio := float64(d.RxBytes) / float64(maxBytes)
-		txRatio := float64(d.TxBytes) / float64(maxBytes)
+			if rxLen == 0 && d.RxBytes > 0 {
+				rxLen = 1
+			}
+			if txLen == 0 && d.TxBytes > 0 {
+				txLen = 1
+			}
 
-		rxLen := int(rxRatio * float64(chartWidth))
-		txLen := int(txRatio * float64(chartWidth))
+			// Build bar with padding
+			rxBar := ChartBarRx.Render(strings.Repeat(SymbolBar, rxLen))
+			txBar := ChartBarTx.Render(strings.Repeat(SymbolBar, txLen))
+			padding := strings.Repeat(" ", chartWidth-rxLen-txLen)
 
-		if rxLen == 0 && d.RxBytes > 0 {
-			rxLen = 1
+			// RX/TX values
+			rxVal := RxStyle.Render(fmt.Sprintf("RX:%-8s", FormatBytes(d.RxBytes)))
+			txVal := TxStyle.Render(fmt.Sprintf("TX:%-8s", FormatBytes(d.TxBytes)))
+
+			b.WriteString(fmt.Sprintf("  %s %s%s%s  %s %s\n", dateLabel, rxBar, txBar, padding, rxVal, txVal))
+		} else {
+			// Empty placeholder row
+			b.WriteString(fmt.Sprintf("  %s %s\n",
+				ChartLabel.Render("------"),
+				LabelStyle.Render(strings.Repeat("─", chartWidth)+"  "+strings.Repeat(" ", 28))))
 		}
-		if txLen == 0 && d.TxBytes > 0 {
-			txLen = 1
-		}
-
-		// Build bar
-		rxBar := ChartBarRx.Render(strings.Repeat(SymbolBar, rxLen))
-		txBar := ChartBarTx.Render(strings.Repeat(SymbolBar, txLen))
-
-		// Value label
-		total := d.RxBytes + d.TxBytes
-		valueLabel := LabelStyle.Render(FormatBytes(total))
-
-		b.WriteString(fmt.Sprintf("  %s %s%s %s\n", dateLabel, rxBar, txBar, valueLabel))
 	}
 
 	// Legend
@@ -235,21 +253,44 @@ func (m Model) renderHelpBar() string {
 	keys := []string{
 		HelpKeyStyle.Render("q") + HelpStyle.Render(" quit"),
 		HelpKeyStyle.Render("d") + HelpStyle.Render(" date"),
-		HelpKeyStyle.Render("←/→") + HelpStyle.Render(" port"),
+		HelpKeyStyle.Render("↑/↓") + HelpStyle.Render(" port"),
 		HelpKeyStyle.Render("r") + HelpStyle.Render(" refresh"),
 		HelpKeyStyle.Render("?") + HelpStyle.Render(" help"),
 	}
 	return "  " + strings.Join(keys, "  ")
 }
 
-// renderPortSelector renders the horizontal port selector at the bottom
+// renderPortSelector renders the vertical port table at the bottom
 func (m Model) renderPortSelector() string {
+	var b strings.Builder
+
 	if len(m.ports) == 0 {
 		return LabelStyle.Render("  No ports monitored")
 	}
 
-	var parts []string
-	for i, port := range m.ports {
+	// Table header
+	b.WriteString(fmt.Sprintf("  %s  │  %s\n",
+		PanelTitleStyle.Render(fmt.Sprintf("%-6s", "Port")),
+		PanelTitleStyle.Render(fmt.Sprintf("%-32s", "Description"))))
+	b.WriteString("  " + strings.Repeat("─", 44) + "\n")
+
+	// Table rows (show max 5 ports around current selection)
+	startIdx := 0
+	endIdx := len(m.ports)
+	if len(m.ports) > 5 {
+		startIdx = m.portIndex - 2
+		if startIdx < 0 {
+			startIdx = 0
+		}
+		endIdx = startIdx + 5
+		if endIdx > len(m.ports) {
+			endIdx = len(m.ports)
+			startIdx = endIdx - 5
+		}
+	}
+
+	for i := startIdx; i < endIdx; i++ {
+		port := m.ports[i]
 		desc := m.getPortDescription(port)
 
 		// Truncate description to 32 chars
@@ -257,21 +298,22 @@ func (m Model) renderPortSelector() string {
 			desc = desc[:29] + "..."
 		}
 
-		// Format: "port desc" or just "port"
-		label := fmt.Sprintf("%d", port)
-		if desc != "" {
-			label = fmt.Sprintf("%d %s", port, desc)
-		}
+		portStr := fmt.Sprintf("%-6d", port)
+		descStr := fmt.Sprintf("%-32s", desc)
 
 		// Highlight selected port
 		if i == m.portIndex {
-			parts = append(parts, SelectedStyle.Render("▸ "+label))
+			b.WriteString(fmt.Sprintf("  %s  │  %s\n",
+				SelectedStyle.Render("▸"+portStr[:5]),
+				SelectedStyle.Render(descStr)))
 		} else {
-			parts = append(parts, LabelStyle.Render("  "+label))
+			b.WriteString(fmt.Sprintf("   %s  │  %s\n",
+				LabelStyle.Render(portStr),
+				LabelStyle.Render(descStr)))
 		}
 	}
 
-	return "  " + strings.Join(parts, "  │  ")
+	return b.String()
 }
 
 // getPortDescription returns the description for a port, or empty string if none

@@ -57,8 +57,8 @@ var DefaultKeyMap = KeyMap{
 	Down:      key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
 	Enter:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 	Escape:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
-	NextPort:  key.NewBinding(key.WithKeys("right", "l", "n"), key.WithHelp("→", "next port")),
-	PrevPort:  key.NewBinding(key.WithKeys("left", "h", "N"), key.WithHelp("←", "prev port")),
+	NextPort:  key.NewBinding(key.WithKeys("down", "j", "n"), key.WithHelp("↓", "next port")),
+	PrevPort:  key.NewBinding(key.WithKeys("up", "k", "N"), key.WithHelp("↑", "prev port")),
 }
 
 // Messages
