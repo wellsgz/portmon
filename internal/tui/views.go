@@ -21,12 +21,13 @@ func (m Model) viewDashboard() string {
 		summary := m.renderPeriodSummary()
 		realtime := m.renderRealtimeStats()
 
-		// Calculate widths
+		// Calculate widths and fixed height
 		leftWidth := m.width/2 - 2
 		rightWidth := m.width - leftWidth - 4
+		panelHeight := 9 // Fixed height for alignment
 
-		summaryPanel := PanelStyle.Width(leftWidth).Render(summary)
-		realtimePanel := PanelStyle.Width(rightWidth).Render(realtime)
+		summaryPanel := PanelStyle.Width(leftWidth).Height(panelHeight).Render(summary)
+		realtimePanel := PanelStyle.Width(rightWidth).Height(panelHeight).Render(realtime)
 
 		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, summaryPanel, " ", realtimePanel))
 		b.WriteString("\n")
@@ -96,28 +97,31 @@ func (m Model) renderPeriodSummary() string {
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
-	if m.historicalStats == nil {
-		b.WriteString(LabelStyle.Render("No data"))
-		return b.String()
+	// Default values
+	var totalRx, totalTx, totalBytes, peakRx, peakTx uint64
+	if m.historicalStats != nil {
+		totalRx = m.historicalStats.TotalRx
+		totalTx = m.historicalStats.TotalTx
+		totalBytes = m.historicalStats.TotalBytes
+		peakRx = m.historicalStats.PeakRxRate
+		peakTx = m.historicalStats.PeakTxRate
 	}
 
-	// Stats
-	stats := m.historicalStats
+	// Stats (always show all lines)
 	b.WriteString(fmt.Sprintf("  %s RX:    %s\n",
 		RxStyle.Render(SymbolRx),
-		ValueStyle.Render(FormatBytes(stats.TotalRx))))
+		ValueStyle.Render(FormatBytes(totalRx))))
 	b.WriteString(fmt.Sprintf("  %s TX:    %s\n",
 		TxStyle.Render(SymbolTx),
-		ValueStyle.Render(FormatBytes(stats.TotalTx))))
+		ValueStyle.Render(FormatBytes(totalTx))))
 	b.WriteString(fmt.Sprintf("  %s Total: %s\n",
 		TotalStyle.Render(SymbolTotal),
-		ValueStyle.Render(FormatBytes(stats.TotalBytes))))
+		ValueStyle.Render(FormatBytes(totalBytes))))
 
-	if stats.PeakRxRate > 0 || stats.PeakTxRate > 0 {
-		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("  Peak RX: %s\n", RxStyle.Render(FormatRate(float64(stats.PeakRxRate)))))
-		b.WriteString(fmt.Sprintf("  Peak TX: %s\n", TxStyle.Render(FormatRate(float64(stats.PeakTxRate)))))
-	}
+	// Always show Peak lines for consistent height
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("  Peak RX: %s\n", RxStyle.Render(FormatRate(float64(peakRx)))))
+	b.WriteString(fmt.Sprintf("  Peak TX: %s\n", TxStyle.Render(FormatRate(float64(peakTx)))))
 
 	return b.String()
 }
