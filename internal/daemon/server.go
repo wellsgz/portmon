@@ -211,13 +211,13 @@ func (s *Server) handleGetHistoricalStats(req *api.Request) *api.Response {
 		return s.errorResponse(req.ID, api.ErrCodeInvalidParams, "invalid params")
 	}
 
-	// Query daily stats
+	// Query daily stats from database
 	dailyStats, err := s.db.QueryDailyStats(params.Port, params.StartDate, params.EndDate)
 	if err != nil {
 		return s.errorResponse(req.ID, api.ErrCodeInternal, err.Error())
 	}
 
-	// Aggregate totals
+	// Aggregate totals from DB
 	result := api.HistoricalStatsResult{
 		Port:      params.Port,
 		StartDate: params.StartDate,
@@ -244,6 +244,45 @@ func (s *Server) handleGetHistoricalStats(req *api.Request) *api.Response {
 			PeakRxRate:  d.PeakRxRate,
 			PeakTxRate:  d.PeakTxRate,
 		})
+	}
+
+	// Add current eBPF session stats if today is in the date range
+	// This ensures Period Summary includes traffic not yet persisted to DB
+	today := time.Now().Format("2006-01-02")
+	if today >= params.StartDate && today <= params.EndDate {
+		ebpfStats := s.collector.GetStats(params.Port)
+		if ebpfStats != nil {
+			result.TotalRx += ebpfStats.RxBytes
+			result.TotalTx += ebpfStats.TxBytes
+
+			// Update peak rates if current rates are higher
+			rxRate := uint64(ebpfStats.RxRate)
+			txRate := uint64(ebpfStats.TxRate)
+			if rxRate > result.PeakRxRate {
+				result.PeakRxRate = rxRate
+			}
+			if txRate > result.PeakTxRate {
+				result.PeakTxRate = txRate
+			}
+
+			// Update today's entry in DailyStats or add it
+			todayFound := false
+			for i := range result.DailyStats {
+				if result.DailyStats[i].Date == today {
+					result.DailyStats[i].RxBytes += ebpfStats.RxBytes
+					result.DailyStats[i].TxBytes += ebpfStats.TxBytes
+					todayFound = true
+					break
+				}
+			}
+			if !todayFound && (ebpfStats.RxBytes > 0 || ebpfStats.TxBytes > 0) {
+				result.DailyStats = append(result.DailyStats, api.DayStats{
+					Date:    today,
+					RxBytes: ebpfStats.RxBytes,
+					TxBytes: ebpfStats.TxBytes,
+				})
+			}
+		}
 	}
 
 	result.TotalBytes = result.TotalRx + result.TotalTx
