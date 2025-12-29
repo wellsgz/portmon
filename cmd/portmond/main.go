@@ -63,7 +63,11 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 
 	// CLI flags override config file
 	if len(ports) > 0 {
-		cfg.Ports = ports
+		// Convert CLI int ports to PortConfig
+		cfg.Ports = make([]config.PortConfig, len(ports))
+		for i, p := range ports {
+			cfg.Ports[i] = config.PortConfig{Port: p}
+		}
 	}
 	if dataDir != "" {
 		cfg.DataDir = dataDir
@@ -109,13 +113,24 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("at least one port must be specified (via --port or config file)")
 	}
 
-	// Convert and validate ports
+	// Convert and validate ports (detect duplicates)
 	portList := make([]uint16, 0, len(cfg.Ports))
+	portInfos := make([]daemon.PortInfo, 0, len(cfg.Ports))
+	seen := make(map[int]bool)
 	for _, p := range cfg.Ports {
-		if p < 1 || p > 65535 {
-			return fmt.Errorf("invalid port %d: must be between 1 and 65535", p)
+		if p.Port < 1 || p.Port > 65535 {
+			return fmt.Errorf("invalid port %d: must be between 1 and 65535", p.Port)
 		}
-		portList = append(portList, uint16(p))
+		if seen[p.Port] {
+			slog.Warn("duplicate port in configuration, skipping", "port", p.Port)
+			continue
+		}
+		seen[p.Port] = true
+		portList = append(portList, uint16(p.Port))
+		portInfos = append(portInfos, daemon.PortInfo{
+			Port:        uint16(p.Port),
+			Description: p.Description,
+		})
 	}
 
 	if cfg.RetentionDays < 1 || cfg.RetentionDays > 365 {
@@ -129,6 +144,7 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 
 	daemonCfg := &daemon.Config{
 		Ports:         portList,
+		PortInfos:     portInfos,
 		DataDir:       cfg.DataDir,
 		RetentionDays: cfg.RetentionDays,
 		SocketPath:    cfg.Socket,

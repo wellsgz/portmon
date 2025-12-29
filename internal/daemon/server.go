@@ -32,9 +32,16 @@ type Server struct {
 	clients map[net.Conn]struct{}
 }
 
+// PortInfo holds port and its description.
+type PortInfo struct {
+	Port        uint16
+	Description string
+}
+
 // Config holds daemon configuration.
 type Config struct {
 	Ports         []uint16
+	PortInfos     []PortInfo
 	DataDir       string
 	RetentionDays int
 	SocketPath    string
@@ -247,15 +254,25 @@ func (s *Server) handleGetHistoricalStats(req *api.Request) *api.Response {
 func (s *Server) handleGetStatus(req *api.Request) *api.Response {
 	uptime := time.Since(s.startTime)
 
+	// Convert port infos to API type
+	portInfos := make([]api.PortInfo, len(s.config.PortInfos))
+	for i, p := range s.config.PortInfos {
+		portInfos[i] = api.PortInfo{
+			Port:        p.Port,
+			Description: p.Description,
+		}
+	}
+
 	result := api.StatusResult{
 		Running:        true,
 		Uptime:         formatDuration(uptime),
 		StartTime:      s.startTime.Format(time.RFC3339),
 		MonitoredPorts: s.config.Ports,
+		PortInfos:      portInfos,
 		DataDir:        s.config.DataDir,
 		RetentionDays:  s.config.RetentionDays,
 		SocketPath:     s.config.SocketPath,
-		Version:        "0.1.0",
+		Version:        "0.2.1",
 	}
 
 	return s.successResponse(req.ID, result)

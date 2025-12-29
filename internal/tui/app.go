@@ -57,8 +57,8 @@ var DefaultKeyMap = KeyMap{
 	Down:      key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
 	Enter:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 	Escape:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
-	NextPort:  key.NewBinding(key.WithKeys("n", "tab"), key.WithHelp("n", "next port")),
-	PrevPort:  key.NewBinding(key.WithKeys("N", "shift+tab"), key.WithHelp("N", "prev port")),
+	NextPort:  key.NewBinding(key.WithKeys("right", "l", "n"), key.WithHelp("→", "next port")),
+	PrevPort:  key.NewBinding(key.WithKeys("left", "h", "N"), key.WithHelp("←", "prev port")),
 }
 
 // Messages
@@ -82,6 +82,7 @@ type Model struct {
 	currentView   View
 	port          uint16
 	ports         []uint16
+	portInfos     []api.PortInfo
 	portIndex     int
 	width, height int
 
@@ -253,6 +254,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.daemonStatus = msg.status
 			if msg.status != nil {
 				m.ports = msg.status.MonitoredPorts
+				m.portInfos = msg.status.PortInfos
 				// Set first port if none selected
 				if m.port == 0 && len(m.ports) > 0 {
 					m.port = m.ports[0]

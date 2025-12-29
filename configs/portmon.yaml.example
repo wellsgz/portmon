@@ -2,16 +2,24 @@
 # Place at /etc/portmon/portmon.yaml
 
 # Ports to monitor (required)
+# New format with descriptions:
 ports:
-  - 5000
-  - 8080
+  - port: 5000
+    description: "Main API Server"
+  - port: 8080
+    description: "Web Frontend"
+
+# Old format also supported:
+# ports:
+#   - 5000
+#   - 8080
 
 # Data directory for SQLite database
-# Default: ~/.portmon
+# Default: /var/lib/portmon
 data_dir: /var/lib/portmon
 
 # Unix socket path for IPC
-# Default: <data_dir>/portmon.sock
+# Default: /run/portmon/portmon.sock
 socket: /run/portmon/portmon.sock
 
 # Data retention in days (1-365)

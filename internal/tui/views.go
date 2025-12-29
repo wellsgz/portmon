@@ -42,9 +42,13 @@ func (m Model) viewDashboard() string {
 		}
 		b.WriteString(PanelStyle.Width(m.width - 2).Render(errMsg))
 	} else {
-		b.WriteString(PanelStyle.Width(m.width - 2).Render(LabelStyle.Render("No port selected. Press 'n' to cycle ports.")))
+		b.WriteString(PanelStyle.Width(m.width - 2).Render(LabelStyle.Render("No port selected. Use ←/→ to select a port.")))
 	}
 
+	b.WriteString("\n")
+
+	// Port selector (at bottom)
+	b.WriteString(m.renderPortSelector())
 	b.WriteString("\n")
 
 	// Help bar
@@ -231,9 +235,51 @@ func (m Model) renderHelpBar() string {
 	keys := []string{
 		HelpKeyStyle.Render("q") + HelpStyle.Render(" quit"),
 		HelpKeyStyle.Render("d") + HelpStyle.Render(" date"),
-		HelpKeyStyle.Render("n") + HelpStyle.Render(" port"),
+		HelpKeyStyle.Render("←/→") + HelpStyle.Render(" port"),
 		HelpKeyStyle.Render("r") + HelpStyle.Render(" refresh"),
 		HelpKeyStyle.Render("?") + HelpStyle.Render(" help"),
 	}
 	return "  " + strings.Join(keys, "  ")
+}
+
+// renderPortSelector renders the horizontal port selector at the bottom
+func (m Model) renderPortSelector() string {
+	if len(m.ports) == 0 {
+		return LabelStyle.Render("  No ports monitored")
+	}
+
+	var parts []string
+	for i, port := range m.ports {
+		desc := m.getPortDescription(port)
+
+		// Truncate description to 32 chars
+		if len(desc) > 32 {
+			desc = desc[:29] + "..."
+		}
+
+		// Format: "port desc" or just "port"
+		label := fmt.Sprintf("%d", port)
+		if desc != "" {
+			label = fmt.Sprintf("%d %s", port, desc)
+		}
+
+		// Highlight selected port
+		if i == m.portIndex {
+			parts = append(parts, SelectedStyle.Render("▸ "+label))
+		} else {
+			parts = append(parts, LabelStyle.Render("  "+label))
+		}
+	}
+
+	return "  " + strings.Join(parts, "  │  ")
+}
+
+// getPortDescription returns the description for a port, or empty string if none
+func (m Model) getPortDescription(port uint16) string {
+	for _, info := range m.portInfos {
+		if info.Port == port {
+			return info.Description
+		}
+	}
+	return ""
 }

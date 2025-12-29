@@ -117,16 +117,23 @@ type ActiveConnectionsResult struct {
 	Count       int              `json:"count"`
 }
 
+// PortInfo contains port number and description.
+type PortInfo struct {
+	Port        uint16 `json:"port"`
+	Description string `json:"description"`
+}
+
 // StatusResult contains daemon status information.
 type StatusResult struct {
-	Running        bool     `json:"running"`
-	Uptime         string   `json:"uptime"`
-	StartTime      string   `json:"start_time"`
-	MonitoredPorts []uint16 `json:"monitored_ports"`
-	DataDir        string   `json:"data_dir"`
-	RetentionDays  int      `json:"retention_days"`
-	SocketPath     string   `json:"socket_path"`
-	Version        string   `json:"version"`
+	Running        bool       `json:"running"`
+	Uptime         string     `json:"uptime"`
+	StartTime      string     `json:"start_time"`
+	MonitoredPorts []uint16   `json:"monitored_ports"`
+	PortInfos      []PortInfo `json:"port_infos"`
+	DataDir        string     `json:"data_dir"`
+	RetentionDays  int        `json:"retention_days"`
+	SocketPath     string     `json:"socket_path"`
+	Version        string     `json:"version"`
 }
 
 // ListPortsResult contains the list of monitored ports.

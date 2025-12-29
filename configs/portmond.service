@@ -12,9 +12,13 @@ RestartSec=5
 User=root
 Group=root
 
-# Runtime directory for socket
+# State and runtime directories (auto-created by systemd)
+StateDirectory=portmon
+StateDirectoryMode=0755
 RuntimeDirectory=portmon
 RuntimeDirectoryMode=0755
+ConfigurationDirectory=portmon
+ConfigurationDirectoryMode=0755
 
 # Security hardening (limited due to eBPF requirements)
 NoNewPrivileges=false
@@ -22,10 +26,6 @@ ProtectSystem=strict
 ProtectHome=read-only
 ReadWritePaths=/var/lib/portmon /run/portmon
 PrivateTmp=true
-
-# Configuration directory
-ConfigurationDirectory=portmon
-ConfigurationDirectoryMode=0755
 
 # Capabilities for eBPF
 AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_RESOURCE
