@@ -1,23 +1,31 @@
 [Unit]
 Description=eBPF Port Traffic Monitor Daemon
 After=network.target
-Documentation=https://github.com/portmon/portmon
+Documentation=https://github.com/wellsgz/portmon
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/portmond --port 5000
+ExecStart=/usr/local/bin/portmond -c /etc/portmon/portmon.yaml
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
 User=root
 Group=root
 
+# Runtime directory for socket
+RuntimeDirectory=portmon
+RuntimeDirectoryMode=0755
+
 # Security hardening (limited due to eBPF requirements)
 NoNewPrivileges=false
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/var/lib/portmon /run
+ReadWritePaths=/var/lib/portmon /run/portmon
 PrivateTmp=true
+
+# Configuration directory
+ConfigurationDirectory=portmon
+ConfigurationDirectoryMode=0755
 
 # Capabilities for eBPF
 AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_RESOURCE

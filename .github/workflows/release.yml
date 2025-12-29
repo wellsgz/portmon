@@ -41,17 +41,75 @@ jobs:
           GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmond ./cmd/portmond
           GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portmon ./cmd/portmon
 
-      - name: Create archive
+      - name: Create tar archive
         run: |
           cd dist
           tar -czvf portmon-linux-amd64.tar.gz portmond portmon
-          sha256sum *.tar.gz > checksums.txt
+
+      - name: Build Debian package
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Create package structure
+          mkdir -p pkg/DEBIAN
+          mkdir -p pkg/usr/local/bin
+          mkdir -p pkg/etc/systemd/system
+          mkdir -p pkg/etc/portmon
+          
+          # Copy files
+          cp dist/portmond dist/portmon pkg/usr/local/bin/
+          chmod 755 pkg/usr/local/bin/*
+          cp configs/portmond.service pkg/etc/systemd/system/
+          cp configs/portmon.yaml.example pkg/etc/portmon/
+          
+          # Create control file
+          cat > pkg/DEBIAN/control << EOF
+          Package: portmon
+          Version: ${VERSION}
+          Architecture: amd64
+          Maintainer: wellsgz <wellsgz@github.com>
+          Description: eBPF port traffic monitor
+           A lightweight, real-time network traffic monitoring tool using eBPF
+           kprobes to monitor bidirectional TCP traffic on specified ports.
+          Depends: libc6
+          Section: net
+          Priority: optional
+          EOF
+          
+          # Create postinst script
+          cat > pkg/DEBIAN/postinst << 'EOF'
+          #!/bin/sh
+          set -e
+          systemctl daemon-reload || true
+          echo "portmon installed successfully!"
+          echo "Edit /etc/portmon/portmon.yaml.example and rename to portmon.yaml"
+          echo "Then run: sudo systemctl enable --now portmond"
+          EOF
+          chmod 755 pkg/DEBIAN/postinst
+          
+          # Create prerm script
+          cat > pkg/DEBIAN/prerm << 'EOF'
+          #!/bin/sh
+          set -e
+          systemctl stop portmond || true
+          systemctl disable portmond || true
+          EOF
+          chmod 755 pkg/DEBIAN/prerm
+          
+          # Build package
+          dpkg-deb --build pkg dist/portmon_${VERSION}_amd64.deb
+
+      - name: Create checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.deb > checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/portmon-linux-amd64.tar.gz
+            dist/portmon_*_amd64.deb
             dist/checksums.txt
           generate_release_notes: true
         env:
