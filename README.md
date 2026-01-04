@@ -11,7 +11,9 @@ A lightweight, real-time network traffic monitoring tool using eBPF kprobes to m
 - 🚀 **eBPF-powered** - Minimal overhead using kernel-level packet tracing
 - 📊 **Realtime + Historical** - Live stats and SQLite-backed historical data
 - 🖥️ **TUI Dashboard** - Interactive terminal UI with date range selection
+- 📝 **Port Descriptions** - Label ports in config for easy identification
 - 💾 **Billing Cycle Support** - Custom date ranges for usage tracking
+- 📦 **Debian Package** - Easy installation via `.deb` package
 - 🔧 **Systemd Ready** - Includes service file for production deployment
 
 ## Requirements
@@ -23,10 +25,17 @@ A lightweight, real-time network traffic monitoring tool using eBPF kprobes to m
 
 ## Installation
 
-### From Release
+### From Release (Debian Package)
 
 ```bash
-# Download latest release
+# Download and install .deb (recommended)
+curl -LO https://github.com/wellsgz/portmon/releases/latest/download/portmon_0.4.2_amd64.deb
+sudo dpkg -i portmon_0.4.2_amd64.deb
+```
+
+### From Release (Tarball)
+
+```bash
 curl -LO https://github.com/wellsgz/portmon/releases/latest/download/portmon-linux-amd64.tar.gz
 tar -xzf portmon-linux-amd64.tar.gz
 sudo mv portmond portmon /usr/local/bin/
@@ -49,16 +58,16 @@ make vmlinux generate build
 
 ```bash
 # Start daemon (requires root)
-sudo ./bin/portmond --port 5000 --port 8080
+sudo portmond --port 5000 --port 8080
 
 # Launch TUI (another terminal)
-./bin/portmon tui
+portmon tui
 
 # Or use CLI
-./bin/portmon stats --port 5000
-./bin/portmon stats --port 5000 --today
-./bin/portmon stats --port 5000 --cycle-day 15  # Billing cycle
-./bin/portmon status
+portmon stats --port 5000
+portmon stats --port 5000 --today
+portmon stats --port 5000 --cycle-day 15  # Billing cycle
+portmon status
 ```
 
 ## Architecture
@@ -90,9 +99,17 @@ sudo ./bin/portmond --port 5000 --port 8080
 Create `/etc/portmon/portmon.yaml`:
 
 ```yaml
+# Ports with descriptions (recommended)
 ports:
-  - 5000
-  - 8080
+  - port: 5000
+    description: "API Server"
+  - port: 8080
+    description: "Web Frontend"
+
+# Simple format also supported:
+# ports:
+#   - 5000
+#   - 8080
 
 data_dir: /var/lib/portmon
 socket: /run/portmon/portmon.sock
@@ -127,9 +144,24 @@ portmon stats --port 5000 --json        # JSON output
 |-----|--------|
 | `q` | Quit |
 | `d` | Change date range |
-| `n/N` | Next/Previous port |
-| `r` | Force refresh |
+| `↑/↓` | Navigate ports |
+| `r` | Force refresh (syncs Period Summary) |
 | `?` | Help |
+
+## Systemd Service
+
+```bash
+# Install service
+sudo cp configs/portmond.service /etc/systemd/system/
+sudo cp configs/portmon.yaml.example /etc/portmon/portmon.yaml
+
+# Edit config
+sudo nano /etc/portmon/portmon.yaml
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable --now portmond
+```
 
 ## License
 
