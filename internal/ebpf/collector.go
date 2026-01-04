@@ -56,6 +56,13 @@ func (c *Collector) collect() {
 		return
 	}
 
+	// Get actual active connection counts
+	activeConns, err := c.loader.CountActiveConnections()
+	if err != nil {
+		slog.Debug("failed to count active connections", "error", err)
+		activeConns = make(map[uint16]uint64)
+	}
+
 	now := time.Now()
 
 	c.mu.Lock()
@@ -74,7 +81,7 @@ func (c *Collector) collect() {
 			TxBytes:     current.TxBytes,
 			RxPackets:   current.RxPackets,
 			TxPackets:   current.TxPackets,
-			Connections: current.Connections,
+			Connections: activeConns[port], // Use actual active count
 		}
 
 		// Calculate rates if we have previous data

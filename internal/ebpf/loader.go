@@ -199,6 +199,43 @@ func (l *Loader) ClearPortStats(port uint16) error {
 	return nil
 }
 
+// CountActiveConnections counts actual entries in conn_stats_map per port.
+// This gives accurate active connection counts instead of cumulative totals.
+func (l *Loader) CountActiveConnections() (map[uint16]uint64, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.objs == nil {
+		return nil, errors.New("eBPF programs not loaded")
+	}
+
+	counts := make(map[uint16]uint64)
+
+	var key probePmConnKey
+	var stats probePmConnStats
+	iter := l.objs.ConnStatsMap.Iterate()
+	for iter.Next(&key, &stats) {
+		// Count connections where sport OR dport matches a monitored port
+		// We check which port is monitored by looking at both
+		var enabled uint8
+
+		// Check if sport is monitored
+		if err := l.objs.TargetPorts.Lookup(key.Sport, &enabled); err == nil && enabled == 1 {
+			counts[key.Sport]++
+		}
+		// Check if dport is monitored
+		if err := l.objs.TargetPorts.Lookup(key.Dport, &enabled); err == nil && enabled == 1 {
+			counts[key.Dport]++
+		}
+	}
+
+	if err := iter.Err(); err != nil {
+		return nil, fmt.Errorf("iterating connection stats: %w", err)
+	}
+
+	return counts, nil
+}
+
 // Close releases all eBPF resources.
 func (l *Loader) Close() error {
 	l.mu.Lock()
