@@ -181,6 +181,7 @@ func (s *Server) handleGetRealtimeStats(req *api.Request) *api.Response {
 
 	// Add today's persisted stats from SQLite
 	// This preserves accumulated traffic across daemon restarts
+	// Note: Connections is NOT added because we want current active count only
 	today := time.Now().Format("2006-01-02")
 	dbStats, err := s.db.QueryDailyStats(params.Port, today, today)
 	if err == nil && len(dbStats) > 0 {
@@ -188,7 +189,7 @@ func (s *Server) handleGetRealtimeStats(req *api.Request) *api.Response {
 		stats.TxBytes += dbStats[0].TxBytes
 		stats.RxPackets += dbStats[0].RxPackets
 		stats.TxPackets += dbStats[0].TxPackets
-		stats.Connections += dbStats[0].Connections
+		// Don't add dbStats[0].Connections - we show current active only
 	}
 
 	result := api.RealtimeStatsResult{
